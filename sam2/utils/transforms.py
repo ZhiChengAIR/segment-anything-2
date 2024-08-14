@@ -35,12 +35,13 @@ class SAM2Transforms(nn.Module):
         )
 
     def __call__(self, x):
-        x = self.to_tensor(x)
+        x = x.squeeze(dim=0)
         return self.transforms(x)
 
     def forward_batch(self, img_list):
-        img_batch = [self.transforms(self.to_tensor(img)) for img in img_list]
-        img_batch = torch.stack(img_batch, dim=0)
+        #img_batch = [self.transforms(self.to_tensor(img)) for img in img_list]
+        #img_batch = torch.stack(img_batch, dim=0)
+        img_batch = self.transforms(img_list)
         return img_batch
 
     def transform_coords(

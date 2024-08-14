@@ -22,18 +22,9 @@ with open("README.md", "r") as f:
 
 # Required dependencies
 REQUIRED_PACKAGES = [
-    "torch>=2.3.1",
-    "torchvision>=0.18.1",
-    "numpy>=1.24.4",
-    "tqdm>=4.66.1",
-    "hydra-core>=1.3.2",
-    "iopath>=0.1.10",
-    "pillow>=9.4.0",
 ]
 
 EXTRA_PACKAGES = {
-    "demo": ["matplotlib>=3.9.1", "jupyter>=1.0.0", "opencv-python>=4.7.0"],
-    "dev": ["black==24.2.0", "usort==1.0.2", "ufmt==2.0.0b2"],
 }
 
 # By default, we also build the SAM 2 CUDA extension.
@@ -141,7 +132,7 @@ setup(
     include_package_data=True,
     install_requires=REQUIRED_PACKAGES,
     extras_require=EXTRA_PACKAGES,
-    python_requires=">=3.10.0",
+    python_requires=">=3.9.0",
     ext_modules=get_extensions(),
     cmdclass=cmdclass,
 )

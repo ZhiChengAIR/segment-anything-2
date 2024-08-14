@@ -4,6 +4,7 @@
 # This source code is licensed under the license found in the
 # LICENSE file in the root directory of this source tree.
 
+import math
 from functools import partial
 from typing import List, Tuple, Union
 
@@ -54,7 +55,8 @@ class MultiScaleAttention(nn.Module):
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         B, H, W, _ = x.shape
         # qkv with shape (B, H * W, 3, nHead, C)
-        qkv = self.qkv(x).reshape(B, H * W, 3, self.num_heads, -1)
+        qkv = self.qkv(x)
+        qkv = qkv.reshape(B, H * W, 3, self.num_heads, -1)
         # q, k, v with shape (B, H * W, nheads, C)
         q, k, v = torch.unbind(qkv, 2)
 
@@ -65,7 +67,7 @@ class MultiScaleAttention(nn.Module):
             q = q.reshape(B, H * W, self.num_heads, -1)
 
         # Torch's SDPA expects [B, nheads, H*W, C] so we transpose
-        x = F.scaled_dot_product_attention(
+        x = self.scaled_dot_product_attention(
             q.transpose(1, 2),
             k.transpose(1, 2),
             v.transpose(1, 2),
@@ -77,6 +79,36 @@ class MultiScaleAttention(nn.Module):
         x = self.proj(x)
 
         return x
+
+    def scaled_dot_product_attention(self,
+                                     query,
+                                     key,
+                                     value,
+                                     attn_mask=None,
+                                     dropout_p=0.0,
+                                     is_causal=False,
+                                     scale=None) -> torch.Tensor:
+        L, S = query.size(-2), key.size(-2)
+        scale_factor = 1 / \
+            math.sqrt(query.size(-1)) if scale is None else scale
+        attn_bias = torch.zeros(L, S, dtype=query.dtype)
+        if is_causal:
+            assert attn_mask is None
+            temp_mask = torch.ones(L, S, dtype=torch.bool).tril(diagonal=0)
+            attn_bias.masked_fill_(temp_mask.logical_not(), float("-inf"))
+            attn_bias.to(query.dtype)
+
+        if attn_mask is not None:
+            if attn_mask.dtype == torch.bool:
+                attn_bias.masked_fill_(attn_mask.logical_not(), float("-inf"))
+            else:
+                attn_bias += attn_mask
+        attn_weight = query @ key.transpose(-2, -1) * scale_factor
+        attn_bias = attn_bias.to(attn_weight.device)
+        attn_weight += attn_bias
+        attn_weight = torch.softmax(attn_weight, dim=-1)
+        attn_weight = torch.dropout(attn_weight, dropout_p, train=True)
+        return attn_weight @ value
 
 
 class MultiScaleBlock(nn.Module):
@@ -115,7 +147,8 @@ class MultiScaleBlock(nn.Module):
             num_heads=num_heads,
             q_pool=self.pool,
         )
-        self.drop_path = DropPath(drop_path) if drop_path > 0.0 else nn.Identity()
+        self.drop_path = DropPath(
+            drop_path) if drop_path > 0.0 else nn.Identity()
 
         self.norm2 = norm_layer(dim_out)
         self.mlp = MLP(
@@ -202,7 +235,8 @@ class Hiera(nn.Module):
 
         depth = sum(stages)
         self.q_stride = q_stride
-        self.stage_ends = [sum(stages[:i]) - 1 for i in range(1, len(stages) + 1)]
+        self.stage_ends = [
+            sum(stages[:i]) - 1 for i in range(1, len(stages) + 1)]
         assert 0 <= q_pool <= len(self.stage_ends[:-1])
         self.q_pool_blocks = [x + 1 for x in self.stage_ends[:-1]][:q_pool]
         self.return_interm_layers = return_interm_layers

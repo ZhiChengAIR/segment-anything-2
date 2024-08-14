@@ -85,7 +85,7 @@ class SAM2ImagePredictor:
     @torch.no_grad()
     def set_image(
         self,
-        image: Union[np.ndarray, Image],
+        image: Union[np.ndarray, Image, torch.Tensor],
     ) -> None:
         """
         Calculates the image embeddings for the provided image, allowing
@@ -100,6 +100,9 @@ class SAM2ImagePredictor:
         # Transform the image to the form expected by the model
         if isinstance(image, np.ndarray):
             logging.info("For numpy array image, we assume (HxWxC) format")
+            self._orig_hw = [image.shape[:2]]
+        elif isinstance(image, torch.Tensor):
+            logging.info("For torch tensor image, we assume (HxWxC) format")
             self._orig_hw = [image.shape[:2]]
         elif isinstance(image, Image):
             w, h = image.size
@@ -131,7 +134,7 @@ class SAM2ImagePredictor:
     @torch.no_grad()
     def set_image_batch(
         self,
-        image_list: List[Union[np.ndarray]],
+        image_list: Union[torch.Tensor, List[Union[np.ndarray]]],
     ) -> None:
         """
         Calculates the image embeddings for the provided image batch, allowing
@@ -142,15 +145,17 @@ class SAM2ImagePredictor:
           with pixel values in [0, 255].
         """
         self.reset_predictor()
-        assert isinstance(image_list, list)
-        self._orig_hw = []
-        for image in image_list:
-            assert isinstance(
-                image, np.ndarray
-            ), "Images are expected to be an np.ndarray in RGB format, and of shape  HWC"
-            self._orig_hw.append(image.shape[:2])
-        # Transform the image to the form expected by the model
-        img_batch = self._transforms.forward_batch(image_list)
+        if isinstance(image_list, torch.Tensor):
+            img_batch = self._transforms.forward_batch(image_list)
+        elif isinstance(image_list, list):
+            self._orig_hw = []
+            for image in image_list:
+                assert isinstance(
+                    image, np.ndarray
+                ), "Images are expected to be an np.ndarray in RGB format, and of shape  HWC"
+                self._orig_hw.append(image.shape[:2])
+            # Transform the image to the form expected by the model
+            img_batch = self._transforms.forward_batch(image_list)
         img_batch = img_batch.to(self.device)
         batch_size = img_batch.shape[0]
         assert (
