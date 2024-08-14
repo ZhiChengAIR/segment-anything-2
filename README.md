@@ -210,7 +210,7 @@ def set_image_batch(image_list: torch.Tensor) -> None:
     _, vision_feats, _, _ = sam2._prepare_backbone_features(backbone_out)
     feats = [
         feat.permute(1, 2, 0).view(batch_size, -1, *feat_size)
-        for feat, feat_size in zip(vision_feats[::-1], self._bb_feat_sizes[::-1])
+        for feat, feat_size in zip(vision_feats[::-1], bb_feat_sizes[::-1])
     ][::-1]
     return feats[-1]
 ```
