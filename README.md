@@ -203,6 +203,7 @@ bb_feat_sizes = [
         ]
 
 def set_image_batch(image_list: torch.Tensor) -> None:
+    transforms = SAM2Transforms()
     img_batch = transforms(image_list)
     batch_size = img_batch.shape[0]
     backbone_out = sam2.forward_image(img_batch)
