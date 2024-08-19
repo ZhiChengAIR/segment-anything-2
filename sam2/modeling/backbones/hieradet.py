@@ -163,6 +163,17 @@ class MultiScaleBlock(nn.Module):
             self.proj = nn.Linear(dim, dim_out)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
+        # 1. First normalise embeddings
+        # 2. Perform linear transformation on the embeddings
+        # 3. Pool the embeddings to a smaller dimension
+        # 4. Partition the embeddings into windows
+        # 5. Perform attention on the windows
+        # 6. Unpartition the embedding
+        # 7. Add the pooled residuals to the embedding
+        # 8. Normalise the embedding again
+        # 9. Perform another linear transformation
+        # 10.Add this output to the embedding at step 8
+
         shortcut = x  # B, H, W, C
         x = self.norm1(x)
 

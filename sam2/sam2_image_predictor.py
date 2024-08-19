@@ -92,7 +92,7 @@ class SAM2ImagePredictor:
         masks to be predicted with the 'predict' method.
 
         Arguments:
-          image (np.ndarray or PIL Image): The input image to embed in RGB format. The image should be in HWC format if np.ndarray, or WHC format if PIL Image
+          image (np.ndarray or torch.Tensor): The input image to embed in RGB format. The image should be in HWC format if np.ndarray, or WHC format if PIL Image
           with pixel values in [0, 255].
           image_format (str): The color format of the image, in ['RGB', 'BGR'].
         """
